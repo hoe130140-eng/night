@@ -11,24 +11,23 @@
 <style>
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, sans-serif;
   background: #f5f5f5;
-  color: #000;
 }
 
 .header {
   text-align: center;
-  padding: 15px 10px 5px;
+  padding: 10px;
   font-weight: bold;
 }
 
-.header #date {
-  font-size: 16px;
-}
-
-.header div:last-child {
-  font-size: 13px;
-  margin-top: 4px;
+#search {
+  width: 90%;
+  margin: 10px auto;
+  display: block;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 
 .grid {
@@ -44,26 +43,68 @@ body {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  height: 150px;
-  overflow: hidden;
+  height: 180px;
+}
+
+.cell.important {
+  background: #fff3a0;
+}
+
+.cell.done {
+  opacity: 0.5;
 }
 
 .cell-number {
-  font-size: 10px;
-  padding: 3px 5px;
-  color: #666;
+  border: none;
+  text-align: center;
+  font-size: 11px;
+  border-bottom: 1px solid #eee;
 }
 
 textarea {
-  width: 100%;
   flex: 1;
   border: none;
   resize: none;
   padding: 5px;
   font-size: 11px;
-  line-height: 1.3;
-  outline: none;
   border-top: 1px solid #eee;
+}
+
+textarea:disabled {
+  background: #eee;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #eee;
+}
+
+.buttons button {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 14px;
+  padding: 3px;
+}
+
+.active {
+  background: #ddd;
+}
+
+.highlight {
+  outline: 2px solid red;
+}
+
+.memo {
+  margin: 10px;
+}
+
+.memo textarea {
+  width: 100%;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 </style>
 </head>
@@ -75,16 +116,22 @@ textarea {
   <div>오늘도 화이팅 ❤️</div>
 </div>
 
+<input type="text" id="search" placeholder="🔍 검색">
+
 <div class="grid" id="grid"></div>
 
+<div class="memo">
+  <textarea id="memo" placeholder="📝 메모"></textarea>
+</div>
+
 <script>
-// 📅 날짜 표시
+// 날짜
 const today = new Date();
 const days = ['일','월','화','수','목','금','토'];
 document.getElementById('date').innerText =
-  `📅 ${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')} (${days[today.getDay()]})`;
+`📅 ${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')} (${days[today.getDay()]})`;
 
-// 🔥 Firebase 설정
+// Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC_Jneo8Lf9nrMkOg0c36jhXLbMVK3QUNc",
   authDomain: "night-centrt-map.firebaseapp.com",
@@ -95,44 +142,117 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔲 24칸 생성
 const grid = document.getElementById('grid');
+let cells = [];
 
 for (let i = 0; i < 24; i++) {
   const cell = document.createElement('div');
   cell.className = 'cell';
 
-  const number = document.createElement('div');
+  const number = document.createElement('input');
   number.className = 'cell-number';
-  number.innerText = (i + 1) + ".";
+  number.placeholder = (i + 1);
 
   const top = document.createElement('textarea');
   const bottom = document.createElement('textarea');
 
+  const btnBox = document.createElement('div');
+  btnBox.className = 'buttons';
+
+  const btnStar = document.createElement('button');
+  btnStar.innerText = "⭐";
+
+  const btnLock = document.createElement('button');
+  btnLock.innerText = "🔒";
+
+  const btnDone = document.createElement('button');
+  btnDone.innerText = "✔";
+
+  btnBox.append(btnStar, btnLock, btnDone);
+
   const ref = db.ref('cells/' + i);
 
   ref.on('value', (snap) => {
-    if (snap.val()) {
-      top.value = snap.val().top || '';
-      bottom.value = snap.val().bottom || '';
-    }
+    const data = snap.val() || {};
+
+    number.value = data.number || '';
+    top.value = data.top || '';
+    bottom.value = data.bottom || '';
+
+    cell.classList.toggle('important', data.important);
+    cell.classList.toggle('done', data.done);
+
+    btnStar.classList.toggle('active', data.important);
+    btnLock.classList.toggle('active', data.locked);
+    btnDone.classList.toggle('active', data.done);
+
+    const locked = data.locked;
+    number.disabled = locked;
+    top.disabled = locked;
+    bottom.disabled = locked;
   });
 
-  function save() {
-    ref.set({
+  function save(extra = {}) {
+    ref.update({
+      number: number.value,
       top: top.value,
-      bottom: bottom.value
+      bottom: bottom.value,
+      ...extra
     });
   }
 
-  top.addEventListener('input', save);
-  bottom.addEventListener('input', save);
+  number.addEventListener('input', () => save());
+  top.addEventListener('input', () => save());
+  bottom.addEventListener('input', () => save());
 
-  cell.appendChild(number);
-  cell.appendChild(top);
-  cell.appendChild(bottom);
+  // ⭐ 토글
+  btnStar.onclick = () => {
+    ref.child('important').get().then(snap => {
+      ref.update({ important: !snap.val() });
+    });
+  };
+
+  // 🔒 토글
+  btnLock.onclick = () => {
+    ref.child('locked').get().then(snap => {
+      ref.update({ locked: !snap.val() });
+    });
+  };
+
+  // ✔ 토글
+  btnDone.onclick = () => {
+    ref.child('done').get().then(snap => {
+      ref.update({ done: !snap.val() });
+    });
+  };
+
+  cell.append(number, top, bottom, btnBox);
   grid.appendChild(cell);
+
+  cells.push({cell, number, top, bottom});
 }
+
+// 검색
+document.getElementById('search').addEventListener('input', e => {
+  const k = e.target.value.toLowerCase();
+
+  cells.forEach(c => {
+    const text = (c.number.value + c.top.value + c.bottom.value).toLowerCase();
+    c.cell.classList.toggle('highlight', k && text.includes(k));
+  });
+});
+
+// 메모
+const memoRef = db.ref('memo');
+const memo = document.getElementById('memo');
+
+memoRef.on('value', snap => {
+  memo.value = snap.val() || '';
+});
+
+memo.addEventListener('input', () => {
+  memoRef.set(memo.value);
+});
 </script>
 
 </body>
