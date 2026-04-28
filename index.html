@@ -2,258 +2,298 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Night Center Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Night Center Map - Pro</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <style>
+:root {
+  --cell-bg: #ffffff;
+  --item-bg: #f8f9fa;
+  --accent: #4dabf7;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, sans-serif;
-  background: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #e9ecef;
+  padding-bottom: 20px;
 }
 
 .header {
   text-align: center;
-  padding: 10px;
+  padding: 15px;
+  background: white;
   font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 #search {
   width: 90%;
   margin: 10px auto;
   display: block;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ced4da;
+  font-size: 16px;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding: 6px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .cell {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  height: 180px;
+  min-height: 320px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.2s;
 }
 
-.cell.important {
-  background: #fff3a0;
-}
+.cell.important { background: #fff9db; }
+.cell.done { opacity: 0.6; }
+.cell.drag-over { border: 2px dashed var(--accent); background: #e7f5ff; transform: scale(1.02); }
 
-.cell.done {
-  opacity: 0.5;
-}
-
+.cell-header { padding: 8px; border-bottom: 1px solid #f1f3f5; }
 .cell-number {
-  border: none;
-  text-align: center;
-  font-size: 11px;
-  border-bottom: 1px solid #eee;
+  width: 100%; border: none; text-align: center;
+  font-size: 13px; font-weight: bold; background: transparent;
 }
 
-textarea {
-  flex: 1;
-  border: none;
-  resize: none;
-  padding: 5px;
-  font-size: 11px;
-  border-top: 1px solid #eee;
-}
+/* 아이템 리스트 및 버튼 스타일 */
+.item-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 
-textarea:disabled {
-  background: #eee;
-}
-
-.buttons {
-  display: flex;
-  justify-content: space-around;
-  border-top: 1px solid #eee;
-}
-
-.buttons button {
-  flex: 1;
-  border: none;
-  background: none;
-  font-size: 14px;
-  padding: 3px;
-}
-
-.active {
-  background: #ddd;
-}
-
-.highlight {
-  outline: 2px solid red;
-}
-
-.memo {
-  margin: 10px;
-}
-
-.memo textarea {
-  width: 100%;
-  height: 100px;
+.item {
+  background: white;
+  border: 1px solid #dee2e6;
   border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 8px;
+  cursor: grab;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
 }
+
+.item-text { font-size: 13px; font-weight: 500; color: #333; }
+
+/* 아이템 내부 메모 스타일 */
+.item-memo {
+  font-size: 11px;
+  color: #ff6b6b;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #eee;
+}
+
+.item:active { cursor: grabbing; opacity: 0.7; }
+
+/* 입력창 */
+.add-input {
+  border: none; border-top: 1px solid #eee;
+  padding: 10px; font-size: 12px; outline: none;
+}
+
+.buttons { display: flex; border-top: 1px solid #eee; }
+.buttons button { flex: 1; border: none; background: none; padding: 10px; font-size: 16px; cursor: pointer; }
+.active { background: #f1f3f5; }
+
+.memo { margin: 20px 10px; }
+.memo textarea {
+  width: 100%; height: 100px; border-radius: 10px;
+  border: 1px solid #ced4da; padding: 10px; box-sizing: border-box;
+}
+
+.highlight { outline: 3px solid #4dabf7; z-index: 1; }
 </style>
 </head>
-
 <body>
 
 <div class="header">
   <div id="date"></div>
-  <div>오늘도 화이팅 ❤️</div>
+  <div style="color: #ff6b6b;">오늘도 화이팅 ❤️</div>
 </div>
 
-<input type="text" id="search" placeholder="🔍 검색">
+<input type="text" id="search" placeholder="🔍 아이템/메모 검색...">
 
 <div class="grid" id="grid"></div>
 
 <div class="memo">
-  <textarea id="memo" placeholder="📝 메모"></textarea>
+  <textarea id="memo" placeholder="📝 공통 메모 사항..."></textarea>
 </div>
 
 <script>
-// 날짜
+// --- [1] 기본 설정 및 날짜 ---
 const today = new Date();
 const days = ['일','월','화','수','목','금','토'];
-document.getElementById('date').innerText =
-`📅 ${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')} (${days[today.getDay()]})`;
+document.getElementById('date').innerText = `📅 ${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()} (${days[today.getDay()]})`;
 
-// Firebase
+// --- [2] Firebase 설정 ---
 const firebaseConfig = {
   apiKey: "AIzaSyC_Jneo8Lf9nrMkOg0c36jhXLbMVK3QUNc",
   authDomain: "night-centrt-map.firebaseapp.com",
   databaseURL: "https://night-centrt-map-default-rtdb.firebaseio.com",
   projectId: "night-centrt-map",
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 const grid = document.getElementById('grid');
 let cells = [];
 
+// --- [3] 그리드 생성 ---
 for (let i = 0; i < 24; i++) {
   const cell = document.createElement('div');
   cell.className = 'cell';
+  cell.dataset.index = i;
 
-  const number = document.createElement('input');
-  number.className = 'cell-number';
-  number.placeholder = (i + 1);
+  const cellHeader = document.createElement('div');
+  cellHeader.className = 'cell-header';
+  const numberInput = document.createElement('input');
+  numberInput.className = 'cell-number';
+  numberInput.placeholder = `위치 ${i+1}`;
 
-  const top = document.createElement('textarea');
-  const bottom = document.createElement('textarea');
+  const itemList = document.createElement('div');
+  itemList.className = 'item-list';
+
+  const addInput = document.createElement('input');
+  addInput.className = 'add-input';
+  addInput.placeholder = "+ 새 아이템 추가 (Enter)";
 
   const btnBox = document.createElement('div');
   btnBox.className = 'buttons';
-
-  const btnStar = document.createElement('button');
-  btnStar.innerText = "⭐";
-
-  const btnLock = document.createElement('button');
-  btnLock.innerText = "🔒";
-
-  const btnDone = document.createElement('button');
-  btnDone.innerText = "✔";
-
+  const btnStar = document.createElement('button'); btnStar.innerText = "⭐";
+  const btnLock = document.createElement('button'); btnLock.innerText = "🔒";
+  const btnDone = document.createElement('button'); btnDone.innerText = "✔";
   btnBox.append(btnStar, btnLock, btnDone);
 
-  const ref = db.ref('cells/' + i);
+  cellHeader.appendChild(numberInput);
+  cell.append(cellHeader, itemList, addInput, btnBox);
+  grid.appendChild(cell);
 
-  ref.on('value', (snap) => {
+  const cellRef = db.ref('cells/' + i);
+
+  // --- [4] 데이터 렌더링 ---
+  cellRef.on('value', (snap) => {
     const data = snap.val() || {};
+    numberInput.value = data.title || '';
+    
+    itemList.innerHTML = '';
+    if (data.items) {
+      Object.entries(data.items).forEach(([id, itemData]) => {
+        // 아이템이 단순 문자열일 수도 있고 객체(메모 포함)일 수도 있음 대응
+        const text = typeof itemData === 'object' ? itemData.text : itemData;
+        const memoText = itemData.memo || '';
 
-    number.value = data.number || '';
-    top.value = data.top || '';
-    bottom.value = data.bottom || '';
+        const itemEl = document.createElement('div');
+        itemEl.className = 'item';
+        itemEl.draggable = true;
+        
+        itemEl.innerHTML = `
+          <div class="item-text">${text}</div>
+          ${memoText ? `<div class="item-memo">📌 ${memoText}</div>` : ''}
+        `;
+
+        // [핵심 기능] 짧게 클릭 시 메모 입력/수정
+        itemEl.onclick = () => {
+          const action = prompt(`[${text}]\n1. 메모 입력/수정\n2. 삭제\n(번호나 내용을 입력하세요)`, memoText);
+          
+          if (action === null) return; // 취소
+
+          if (action === '2' || action === '삭제') {
+            if(confirm('삭제하시겠습니까?')) cellRef.child('items').child(id).remove();
+          } else {
+            // 입력한 내용을 메모로 저장 (1을 누르고 다시 입력하거나 바로 내용 입력 시)
+            const newMemo = action === '1' ? prompt('새로운 메모를 입력하세요', memoText) : action;
+            if (newMemo !== null) {
+              cellRef.child('items').child(id).update({
+                text: text,
+                memo: newMemo
+              });
+            }
+          }
+        };
+
+        itemEl.ondragstart = (e) => {
+          e.dataTransfer.setData('itemId', id);
+          e.dataTransfer.setData('fromCell', i);
+        };
+
+        itemList.appendChild(itemEl);
+      });
+    }
 
     cell.classList.toggle('important', data.important);
     cell.classList.toggle('done', data.done);
-
     btnStar.classList.toggle('active', data.important);
     btnLock.classList.toggle('active', data.locked);
     btnDone.classList.toggle('active', data.done);
-
-    const locked = data.locked;
-    number.disabled = locked;
-    top.disabled = locked;
-    bottom.disabled = locked;
+    
+    numberInput.disabled = data.locked;
+    addInput.disabled = data.locked;
   });
 
-  function save(extra = {}) {
-    ref.update({
-      number: number.value,
-      top: top.value,
-      bottom: bottom.value,
-      ...extra
-    });
-  }
+  // --- [5] 이벤트 리스너 ---
+  numberInput.onchange = () => cellRef.update({ title: numberInput.value });
 
-  number.addEventListener('input', () => save());
-  top.addEventListener('input', () => save());
-  bottom.addEventListener('input', () => save());
+  addInput.onkeydown = (e) => {
+    if (e.key === 'Enter' && addInput.value.trim()) {
+      cellRef.child('items').push({
+        text: addInput.value.trim(),
+        memo: ''
+      });
+      addInput.value = '';
+    }
+  };
 
-  // ⭐ 토글
-  btnStar.onclick = () => {
-    ref.child('important').get().then(snap => {
-      ref.update({ important: !snap.val() });
+  btnStar.onclick = () => cellRef.child('important').transaction(v => !v);
+  btnLock.onclick = () => cellRef.child('locked').transaction(v => !v);
+  btnDone.onclick = () => cellRef.child('done').transaction(v => !v);
+
+  cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+  cell.ondragleave = () => cell.classList.remove('drag-over');
+  cell.ondrop = (e) => {
+    e.preventDefault();
+    cell.classList.remove('drag-over');
+    const itemId = e.dataTransfer.getData('itemId');
+    const fromCellIdx = e.dataTransfer.getData('fromCell');
+    if (fromCellIdx == i) return;
+
+    const fromRef = db.ref(`cells/${fromCellIdx}/items/${itemId}`);
+    const toRef = db.ref(`cells/${i}/items`);
+
+    fromRef.once('value', snap => {
+      if (snap.exists()) {
+        toRef.push(snap.val());
+        fromRef.remove();
+      }
     });
   };
 
-  // 🔒 토글
-  btnLock.onclick = () => {
-    ref.child('locked').get().then(snap => {
-      ref.update({ locked: !snap.val() });
-    });
-  };
-
-  // ✔ 토글
-  btnDone.onclick = () => {
-    ref.child('done').get().then(snap => {
-      ref.update({ done: !snap.val() });
-    });
-  };
-
-  cell.append(number, top, bottom, btnBox);
-  grid.appendChild(cell);
-
-  cells.push({cell, number, top, bottom});
+  cells.push({cell, numberInput, itemList});
 }
 
-// 검색
-document.getElementById('search').addEventListener('input', e => {
+// --- [6] 검색 기능 (메모 내용도 검색 가능) ---
+document.getElementById('search').oninput = (e) => {
   const k = e.target.value.toLowerCase();
-
   cells.forEach(c => {
-    const text = (c.number.value + c.top.value + c.bottom.value).toLowerCase();
+    const text = (c.numberInput.value + c.itemList.innerText).toLowerCase();
     c.cell.classList.toggle('highlight', k && text.includes(k));
   });
-});
+};
 
-// 메모
 const memoRef = db.ref('memo');
 const memo = document.getElementById('memo');
+memoRef.on('value', snap => memo.value = snap.val() || '');
+memo.oninput = () => memoRef.set(memo.value);
 
-memoRef.on('value', snap => {
-  memo.value = snap.val() || '';
-});
-
-memo.addEventListener('input', () => {
-  memoRef.set(memo.value);
-});
 </script>
-
 </body>
 </html>
