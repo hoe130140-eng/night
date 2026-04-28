@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Night Center Map</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #111;
+  color: #fff;
+}
+
+.header {
+  text-align: center;
+  padding: 15px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px;
+}
+
+.cell {
+  background: #222;
+  border-radius: 8px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  height: 140px;
+}
+
+textarea {
+  width: 100%;
+  flex: 1;
+  background: #333;
+  color: #fff;
+  border: none;
+  resize: none;
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div id="date"></div>
+  <div>오늘도 화이팅 ❤️</div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+// 날짜 표시
+const today = new Date();
+const days = ['일','월','화','수','목','금','토'];
+document.getElementById('date').innerText =
+  `📅 ${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')} (${days[today.getDay()]})`;
+
+// 🔥 Firebase 연결 (네 코드 적용 완료)
+const firebaseConfig = {
+  apiKey: "AIzaSyC_Jneo8Lf9nrMkOg0c36jhXLbMVK3QUNc",
+  authDomain: "night-centrt-map.firebaseapp.com",
+  databaseURL: "https://night-centrt-map-default-rtdb.firebaseio.com",
+  projectId: "night-centrt-map",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// 24칸 생성
+const grid = document.getElementById('grid');
+
+for (let i = 0; i < 24; i++) {
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+
+  const top = document.createElement('textarea');
+  const bottom = document.createElement('textarea');
+
+  const ref = db.ref('cells/' + i);
+
+  ref.on('value', (snap) => {
+    if (snap.val()) {
+      top.value = snap.val().top || '';
+      bottom.value = snap.val().bottom || '';
+    }
+  });
+
+  function save() {
+    ref.set({
+      top: top.value,
+      bottom: bottom.value
+    });
+  }
+
+  top.addEventListener('input', save);
+  bottom.addEventListener('input', save);
+
+  cell.appendChild(top);
+  cell.appendChild(bottom);
+  grid.appendChild(cell);
+}
+</script>
+
+</body>
+</html>
