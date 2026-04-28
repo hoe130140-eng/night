@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Night Center Map - Front/Back</title>
+<title>Night Center Map - Auto Scaling</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -11,7 +11,6 @@
 <style>
 :root {
   --cell-bg: #ffffff;
-  --item-bg: #ffffff;
   --accent: #4dabf7;
   --front-color: #e7f5ff;
   --back-color: #fff4e6;
@@ -45,17 +44,18 @@ body {
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 10px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .cell {
   background: var(--cell-bg);
   border: 1px solid #dee2e6;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  min-height: 400px; /* 앞뒤 구분을 위해 높이 확장 */
+  /* 8개씩 들어갈 수 있도록 최소 높이 설정 */
+  min-height: 480px; 
   box-shadow: 0 2px 5px rgba(0,0,0,0.08);
   overflow: hidden;
 }
@@ -63,27 +63,28 @@ body {
 .cell.important { border: 3px solid #fcc419; }
 .cell.done { opacity: 0.5; }
 
-.cell-header { padding: 6px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+.cell-header { padding: 4px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
 .cell-number {
   width: 100%; border: none; text-align: center;
-  font-size: 14px; font-weight: bold; background: transparent;
+  font-size: 13px; font-weight: bold; background: transparent;
 }
 
-/* 앞뒤 영역 스타일 */
+/* 구역 스타일 */
 .zone {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 6px;
+  padding: 4px;
   position: relative;
+  overflow: hidden;
 }
 .zone-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: bold;
   text-align: center;
-  padding: 2px;
-  margin-bottom: 4px;
-  border-radius: 4px;
+  padding: 1px;
+  margin-bottom: 3px;
+  border-radius: 3px;
   color: #495057;
 }
 .zone-front { background: var(--front-color); border-bottom: 1px dashed #adb5bd; }
@@ -91,33 +92,47 @@ body {
 .zone-front .zone-label { background: #d0ebff; }
 .zone-back .zone-label { background: #ffe8cc; }
 
-.item-list { flex: 1; display: flex; flex-direction: column; gap: 5px; min-height: 50px; }
+.item-list { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 3px; 
+  min-height: 50px;
+}
 
-/* 아이템 디자인 */
+/* 아이템 디자인 및 글자 크기 자동 조절 클래스 */
 .item {
   background: white;
   border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 6px;
+  border-radius: 4px;
+  padding: 4px 6px;
   cursor: grab;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
 }
-.item-text { font-size: 12px; font-weight: 500; color: #333; }
-.item-memo { font-size: 10px; color: #ff6b6b; margin-top: 2px; }
-.item.dragging { opacity: 0.4; }
 
-/* 드래그 오버 효과 */
+/* 기본 글자 크기 */
+.item-text { font-size: 12px; font-weight: 500; color: #333; }
+.item-memo { font-size: 10px; color: #ff6b6b; }
+
+/* 아이템이 많아질 때 적용될 작은 글자 크기 (JS에서 제어) */
+.item.small .item-text { font-size: 10px; }
+.item.small .item-memo { font-size: 8px; }
+
+.item.dragging { opacity: 0.4; }
 .zone.drag-over { background: #ffdeeb !important; outline: 2px dashed #f06595; }
 
-/* 하단 입력/버튼 */
+/* 하단 영역 */
 .input-area { border-top: 1px solid #eee; display: flex; flex-direction: column; }
-.add-input { border: none; padding: 10px; font-size: 12px; outline: none; background: #fff; }
+.add-input { border: none; padding: 8px; font-size: 11px; outline: none; background: #fff; }
 .buttons { display: flex; border-top: 1px solid #eee; }
-.buttons button { flex: 1; border: none; background: none; padding: 10px; font-size: 16px; }
+.buttons button { flex: 1; border: none; background: none; padding: 8px; font-size: 14px; }
 .active { background: #e9ecef; }
 
-.memo { margin: 20px 10px; }
-.memo textarea { width: 100%; height: 80px; border-radius: 10px; border: 1px solid #ced4da; padding: 10px; box-sizing: border-box; }
+.memo { margin: 15px 10px; }
+.memo textarea { width: 100%; height: 60px; border-radius: 10px; border: 1px solid #ced4da; padding: 10px; box-sizing: border-box; font-size: 12px; }
 .highlight { outline: 4px solid #4dabf7; z-index: 1; }
 </style>
 </head>
@@ -125,7 +140,7 @@ body {
 
 <div class="header">
   <div id="date"></div>
-  <div style="color: #ff6b6b;">매대 앞뒤 정리 모드 ❤️</div>
+  <div style="color: #ff6b6b;">오늘도 화이팅 ❤️</div>
 </div>
 
 <input type="text" id="search" placeholder="🔍 아이템/메모 검색...">
@@ -155,7 +170,6 @@ for (let i = 0; i < 24; i++) {
   const cell = document.createElement('div');
   cell.className = 'cell';
   
-  // 헤더 (위치 번호)
   const cellHeader = document.createElement('div');
   cellHeader.className = 'cell-header';
   const numberInput = document.createElement('input');
@@ -163,17 +177,14 @@ for (let i = 0; i < 24; i++) {
   numberInput.placeholder = `위치 ${i+1}`;
   cellHeader.appendChild(numberInput);
 
-  // 앞면 영역 (FRONT)
   const zoneFront = createZone(i, 'front');
-  // 뒷면 영역 (BACK)
   const zoneBack = createZone(i, 'back');
 
-  // 하단 입력 및 버튼
   const inputArea = document.createElement('div');
   inputArea.className = 'input-area';
   const addInput = document.createElement('input');
   addInput.className = 'add-input';
-  addInput.placeholder = "+ 아이템 추가 (앞면에 추가됨)";
+  addInput.placeholder = "+ 아이템 추가 (앞면에 생성)";
   
   const btnBox = document.createElement('div');
   btnBox.className = 'buttons';
@@ -188,7 +199,6 @@ for (let i = 0; i < 24; i++) {
 
   const cellRef = db.ref('cells/' + i);
 
-  // 데이터 수신
   cellRef.on('value', (snap) => {
     const data = snap.val() || {};
     numberInput.value = data.title || '';
@@ -203,7 +213,6 @@ for (let i = 0; i < 24; i++) {
     addInput.disabled = data.locked;
   });
 
-  // 이벤트
   numberInput.onchange = () => cellRef.update({ title: numberInput.value });
   addInput.onkeydown = (e) => {
     if (e.key === 'Enter' && addInput.value.trim()) {
@@ -253,9 +262,14 @@ function createZone(cellIdx, zoneType) {
 function renderItems(container, itemsData, cellIdx, zoneType) {
   container.innerHTML = '';
   if (!itemsData) return;
-  Object.entries(itemsData).forEach(([id, data]) => {
+  
+  const entries = Object.entries(itemsData);
+  const itemCount = entries.length;
+
+  entries.forEach(([id, data]) => {
     const itemEl = document.createElement('div');
-    itemEl.className = 'item';
+    // 아이템이 6개 이상이면 'small' 클래스 추가하여 글자 크기 줄임
+    itemEl.className = `item ${itemCount >= 6 ? 'small' : ''}`;
     itemEl.draggable = true;
     itemEl.innerHTML = `
       <div class="item-text">${data.text}</div>
@@ -282,7 +296,6 @@ function renderItems(container, itemsData, cellIdx, zoneType) {
   });
 }
 
-// 검색 및 메모
 document.getElementById('search').oninput = (e) => {
   const k = e.target.value.toLowerCase();
   cells.forEach(c => {
